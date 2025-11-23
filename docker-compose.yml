@@ -3,7 +3,7 @@ services:
     build: .
     ports:
       - "8080:80"
-      - "8443:443"
+      - "${APP_PORT:-8443}:443"
     # volumes:
     #   - /Users/hexome/Downloads/colibrism-140nulled/codecanyon-26612898-colibrism-the-ultimate-php-modern-social-media-sharing-platform/ColibriSM:/var/www/html
     depends_on:
@@ -13,7 +13,7 @@ services:
       - DB_USER=colibri
       - DB_PASS=colibri_pass
       - DB_NAME=colibri
-      - SITE_URL=https://192.168.0.112:8443
+      - SITE_URL=https://192.168.0.112:${APP_PORT:-8443}
 
   db:
     image: mariadb:latest
