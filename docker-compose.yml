@@ -2,7 +2,7 @@ services:
   app:
     build: .
     ports:
-      - "8080:80"
+      - "${HTTP_PORT:-8080}:80"
       - "${APP_PORT:-8443}:443"
     # volumes:
     #   - /Users/hexome/Downloads/colibrism-140nulled/codecanyon-26612898-colibrism-the-ultimate-php-modern-social-media-sharing-platform/ColibriSM:/var/www/html
