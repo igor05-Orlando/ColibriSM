@@ -44,18 +44,18 @@ else
     echo "HTTP_PORT already set in .env"
 fi
 
-# Check if APP_PORT is already set
-if ! grep -q "^APP_PORT=" .env; then
-    PORT=$(find_free_port)
-    if [ $? -eq 0 ]; then
-        echo "APP_PORT=$PORT" >> .env
-        echo "Selected free HTTPS port: $PORT"
-    else
-        echo "Failed to find a free HTTPS port"
-        exit 1
+# Check if SITE_URL is already set
+if ! grep -q "^SITE_URL=" .env; then
+    # Detect external IP
+    HOST_IP=$(curl -s --connect-timeout 5 ifconfig.me 2>/dev/null || echo "localhost")
+    if [ "$HOST_IP" = "localhost" ]; then
+        echo "Warning: Could not detect external IP, using localhost"
     fi
+    SITE_URL="https://$HOST_IP:$APP_PORT"
+    echo "SITE_URL=$SITE_URL" >> .env
+    echo "Set SITE_URL to: $SITE_URL"
 else
-    echo "APP_PORT already set in .env"
+    echo "SITE_URL already set in .env"
 fi
 
 # Load environment variables from .env
