@@ -13,6 +13,7 @@ services:
       - DB_USER=colibri
       - DB_PASS=colibri_pass
       - DB_NAME=colibri
+      - SITE_URL
 
   db:
     image: mariadb:latest

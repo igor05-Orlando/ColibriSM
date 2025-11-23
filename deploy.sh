@@ -22,74 +22,132 @@ is_port_free() {
     fi
 }
 
-# Stop any existing containers
-docker compose down
+# Hard reset function
+hard_reset() {
+    echo "Performing hard reset..."
+    docker compose down -v --remove-orphans
+    docker system prune -f
+    rm -f .env
+    echo "Hard reset complete. All data and configurations removed."
+    exit 0
+}
 
-# Create .env if it doesn't exist
-if [ ! -f .env ]; then
-    touch .env
-fi
-
-# Check if HTTP_PORT is already set
-if ! grep -q "^HTTP_PORT=" .env; then
-    PORT=$(find_free_port)
-    if [ $? -eq 0 ]; then
-        echo "HTTP_PORT=$PORT" >> .env
-        echo "Selected free HTTP port: $PORT"
-    else
-        echo "Failed to find a free HTTP port"
+# Install function
+install_app() {
+    echo "Starting installation..."
+    # Run the normal deploy
+    main_deploy
+    # Wait for containers to be ready
+    echo "Waiting for services to be ready..."
+    sleep 10
+    # Get the SITE_URL from .env
+    SITE_URL=$(grep "^SITE_URL=" .env | cut -d'=' -f2)
+    if [ -z "$SITE_URL" ]; then
+        echo "SITE_URL not found in .env"
         exit 1
     fi
-else
-    echo "HTTP_PORT already set in .env"
-fi
+    echo "Access the installation at: $SITE_URL/install/"
+    echo "Installation URL ready. Please complete the setup in your browser."
+}
 
-# Check if SITE_URL is already set
-if ! grep -q "^SITE_URL=" .env; then
-    # Detect external IP
-    HOST_IP=$(curl -s --connect-timeout 5 ifconfig.me 2>/dev/null || echo "localhost")
-    if [ "$HOST_IP" = "localhost" ]; then
-        echo "Warning: Could not detect external IP, using localhost"
+# Main deploy function
+main_deploy() {
+    # Stop any existing containers
+    docker compose down
+
+    # Create .env if it doesn't exist
+    if [ ! -f .env ]; then
+        touch .env
     fi
-    SITE_URL="https://$HOST_IP:$APP_PORT"
-    echo "SITE_URL=$SITE_URL" >> .env
-    echo "Set SITE_URL to: $SITE_URL"
-else
-    echo "SITE_URL already set in .env"
-fi
 
-# Load environment variables from .env
-export $(grep -v '^#' .env | xargs)
-
-# Verify and reassign ports if necessary
-if [ -n "$HTTP_PORT" ] && ! is_port_free "$HTTP_PORT"; then
-    echo "HTTP_PORT $HTTP_PORT is not free, reassigning..."
-    NEW_PORT=$(find_free_port)
-    if [ $? -eq 0 ]; then
-        sed -i.bak "s/^HTTP_PORT=.*/HTTP_PORT=$NEW_PORT/" .env
-        HTTP_PORT=$NEW_PORT
-        echo "Reassigned HTTP port to: $NEW_PORT"
+    # Check if HTTP_PORT is already set
+    if ! grep -q "^HTTP_PORT=" .env; then
+        PORT=$(find_free_port)
+        if [ $? -eq 0 ]; then
+            echo "HTTP_PORT=$PORT" >> .env
+            echo "Selected free HTTP port: $PORT"
+        else
+            echo "Failed to find a free HTTP port"
+            exit 1
+        fi
     else
-        echo "Failed to reassign HTTP port"
-        exit 1
+        echo "HTTP_PORT already set in .env"
     fi
-fi
 
-if [ -n "$APP_PORT" ] && ! is_port_free "$APP_PORT"; then
-    echo "APP_PORT $APP_PORT is not free, reassigning..."
-    NEW_PORT=$(find_free_port)
-    if [ $? -eq 0 ]; then
-        sed -i.bak "s/^APP_PORT=.*/APP_PORT=$NEW_PORT/" .env
-        APP_PORT=$NEW_PORT
-        echo "Reassigned HTTPS port to: $NEW_PORT"
+    # Check if APP_PORT is already set
+    if ! grep -q "^APP_PORT=" .env; then
+        PORT=$(find_free_port)
+        if [ $? -eq 0 ]; then
+            echo "APP_PORT=$PORT" >> .env
+            echo "Selected free HTTPS port: $PORT"
+        else
+            echo "Failed to find a free HTTPS port"
+            exit 1
+        fi
     else
-        echo "Failed to reassign HTTPS port"
-        exit 1
+        echo "APP_PORT already set in .env"
     fi
-fi
 
-# Re-export after potential changes
-export $(grep -v '^#' .env | xargs)
+    # Check if SITE_URL is already set
+    if ! grep -q "^SITE_URL=" .env; then
+        # Detect external IP
+        HOST_IP=$(curl -s --connect-timeout 5 ifconfig.me 2>/dev/null || echo "localhost")
+        if [ "$HOST_IP" = "localhost" ]; then
+            echo "Warning: Could not detect external IP, using localhost"
+        fi
+        SITE_URL="https://$HOST_IP:$APP_PORT"
+        echo "SITE_URL=$SITE_URL" >> .env
+        echo "Set SITE_URL to: $SITE_URL"
+    else
+        echo "SITE_URL already set in .env"
+    fi
 
-# Run docker compose
-docker compose up -d
+    # Load environment variables from .env
+    export $(grep -v '^#' .env | xargs)
+
+    # Verify and reassign ports if necessary
+    if [ -n "$HTTP_PORT" ] && ! is_port_free "$HTTP_PORT"; then
+        echo "HTTP_PORT $HTTP_PORT is not free, reassigning..."
+        NEW_PORT=$(find_free_port)
+        if [ $? -eq 0 ]; then
+            sed -i.bak "s/^HTTP_PORT=.*/HTTP_PORT=$NEW_PORT/" .env
+            HTTP_PORT=$NEW_PORT
+            echo "Reassigned HTTP port to: $NEW_PORT"
+        else
+            echo "Failed to reassign HTTP port"
+            exit 1
+        fi
+    fi
+
+    if [ -n "$APP_PORT" ] && ! is_port_free "$APP_PORT"; then
+        echo "APP_PORT $APP_PORT is not free, reassigning..."
+        NEW_PORT=$(find_free_port)
+        if [ $? -eq 0 ]; then
+            sed -i.bak "s/^APP_PORT=.*/APP_PORT=$NEW_PORT/" .env
+            APP_PORT=$NEW_PORT
+            echo "Reassigned HTTPS port to: $NEW_PORT"
+        else
+            echo "Failed to reassign HTTPS port"
+            exit 1
+        fi
+    fi
+
+    # Re-export after potential changes
+    export $(grep -v '^#' .env | xargs)
+
+    # Run docker compose
+    docker compose up -d
+}
+
+# Main script logic
+case "$1" in
+    --hard-reset)
+        hard_reset
+        ;;
+    --install)
+        install_app
+        ;;
+    *)
+        main_deploy
+        ;;
+esac

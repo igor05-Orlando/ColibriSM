@@ -11,8 +11,13 @@ This project is a Dockerized version of ColibriSM, a modern social media sharing
 
 ## Getting Started
 1. Ensure Docker and Docker Compose (V2) are installed.
-2. Run `./deploy.sh` to start the services (it will automatically select free ports if not set and stop any existing containers).
-3. Access the application at `https://localhost:<APP_PORT>` (HTTP available on `http://localhost:<HTTP_PORT>`, ports from .env).
+2. Run `./deploy.sh --install` to start the services and get the installation URL.
+3. Access the application at the provided URL and complete the setup.
+
+## Commands
+- `./deploy.sh`: Start the services with automatic port assignment.
+- `./deploy.sh --install`: Start services and display installation URL.
+- `./deploy.sh --hard-reset`: Reset everything to factory state (removes all data and configurations).
 
 ## SSL/TLS
 The project is configured to use HTTPS with self-signed certificates for local development.
