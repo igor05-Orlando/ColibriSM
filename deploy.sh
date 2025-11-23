@@ -12,9 +12,26 @@ find_free_port() {
     return 1
 }
 
+# Stop any existing containers
+docker compose down
+
 # Create .env if it doesn't exist
 if [ ! -f .env ]; then
     touch .env
+fi
+
+# Check if HTTP_PORT is already set
+if ! grep -q "^HTTP_PORT=" .env; then
+    PORT=$(find_free_port)
+    if [ $? -eq 0 ]; then
+        echo "HTTP_PORT=$PORT" >> .env
+        echo "Selected free HTTP port: $PORT"
+    else
+        echo "Failed to find a free HTTP port"
+        exit 1
+    fi
+else
+    echo "HTTP_PORT already set in .env"
 fi
 
 # Check if APP_PORT is already set
@@ -22,9 +39,9 @@ if ! grep -q "^APP_PORT=" .env; then
     PORT=$(find_free_port)
     if [ $? -eq 0 ]; then
         echo "APP_PORT=$PORT" >> .env
-        echo "Selected free port: $PORT"
+        echo "Selected free HTTPS port: $PORT"
     else
-        echo "Failed to find a free port"
+        echo "Failed to find a free HTTPS port"
         exit 1
     fi
 else
@@ -34,5 +51,5 @@ fi
 # Load environment variables from .env
 export $(grep -v '^#' .env | xargs)
 
-# Run docker-compose
-docker-compose up -d
+# Run docker compose
+docker compose up -d
