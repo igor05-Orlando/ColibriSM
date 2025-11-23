@@ -1,0 +1,29 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8080:80"
+      - "8443:443"
+    # volumes:
+    #   - /Users/hexome/Downloads/colibrism-140nulled/codecanyon-26612898-colibrism-the-ultimate-php-modern-social-media-sharing-platform/ColibriSM:/var/www/html
+    depends_on:
+      - db
+    environment:
+      - DB_HOST=db
+      - DB_USER=colibri
+      - DB_PASS=colibri_pass
+      - DB_NAME=colibri
+      - SITE_URL=https://192.168.0.112:8443
+
+  db:
+    image: mariadb:latest
+    environment:
+      - MYSQL_ROOT_PASSWORD=root_pass
+      - MYSQL_DATABASE=colibri
+      - MYSQL_USER=colibri
+      - MYSQL_PASSWORD=colibri_pass
+    volumes:
+      - db_data:/var/lib/mysql
+
+volumes:
+  db_data:
