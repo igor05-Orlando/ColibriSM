@@ -12,6 +12,16 @@ find_free_port() {
     return 1
 }
 
+# Function to check if a port is free
+is_port_free() {
+    local port=$1
+    if lsof -Pi :$port -sTCP:LISTEN -t >/dev/null 2>&1; then
+        return 1  # not free
+    else
+        return 0  # free
+    fi
+}
+
 # Stop any existing containers
 docker compose down
 
@@ -49,6 +59,36 @@ else
 fi
 
 # Load environment variables from .env
+export $(grep -v '^#' .env | xargs)
+
+# Verify and reassign ports if necessary
+if [ -n "$HTTP_PORT" ] && ! is_port_free "$HTTP_PORT"; then
+    echo "HTTP_PORT $HTTP_PORT is not free, reassigning..."
+    NEW_PORT=$(find_free_port)
+    if [ $? -eq 0 ]; then
+        sed -i.bak "s/^HTTP_PORT=.*/HTTP_PORT=$NEW_PORT/" .env
+        HTTP_PORT=$NEW_PORT
+        echo "Reassigned HTTP port to: $NEW_PORT"
+    else
+        echo "Failed to reassign HTTP port"
+        exit 1
+    fi
+fi
+
+if [ -n "$APP_PORT" ] && ! is_port_free "$APP_PORT"; then
+    echo "APP_PORT $APP_PORT is not free, reassigning..."
+    NEW_PORT=$(find_free_port)
+    if [ $? -eq 0 ]; then
+        sed -i.bak "s/^APP_PORT=.*/APP_PORT=$NEW_PORT/" .env
+        APP_PORT=$NEW_PORT
+        echo "Reassigned HTTPS port to: $NEW_PORT"
+    else
+        echo "Failed to reassign HTTPS port"
+        exit 1
+    fi
+fi
+
+# Re-export after potential changes
 export $(grep -v '^#' .env | xargs)
 
 # Run docker compose
